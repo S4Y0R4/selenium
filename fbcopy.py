@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from tkinter import filedialog as fd
 from tkinter import messagebox as mb
+from selenium.webdriver.remote.command import Command
 
 
 def auth():
@@ -72,7 +73,6 @@ def posting():
     if not is_driver_active():
         driver_global = driver_setup()
     thread_stop = False
-    option_global.headless = False
     off_buttons()
     visited_group = set()
     try:
@@ -128,26 +128,19 @@ groups in the format: "https://www.facebook.com/groups/123456789/", which you pr
 The field named "Text" must not have "unusual" characters, such as emoticons.""")
 
 def driver_setup():
-    option = webdriver.ChromeOptions()
-    option.add_argument("--disable-blink-features=AutomationControlled")
-    option.add_argument("--disable-notifications")
-    option.headless = False
+    option_global = webdriver.ChromeOptions()
+    option_global.add_argument("--disable-blink-features=AutomationControlled")
+    option_global.add_argument("--disable-notifications")
+    option_global.headless = False
     driver = webdriver.Chrome(
         executable_path=r"chrome\chromedriver.exe",
-        options=option)
+        options=option_global)
     driver.get("https://facebook.com")
     driver.find_element(By.XPATH, "/html/body/div[3]/div[2]/div/div/div/div/div[3]/button[2]").click()
     return driver
 
 def is_driver_active():
-    return get_status(driver_global) == "Alive"
-
-def get_status(driver):
-    try:
-        driver.execute(Command.STATUS)
-        return "Alive"
-    except Exception as ex:
-        return "Dead"
+   return driver_global.service.is_connectable()
 
 # main
 global driver_global
