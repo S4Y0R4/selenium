@@ -6,7 +6,7 @@ import poster as p
 
 
 def file_dialog_wrapper(on_open_file):
-    file_path = fd.askopenfilename()
+    file_path = fd.askopenfilename(filetypes=[("Text files", ".txt")])
     on_open_file(file_path)
 
 
@@ -16,12 +16,12 @@ class AutoPosterGUI(threading.Thread):
         self.posting_btn = None
         self.stop_posting_btn = None
         self.open_btn = None
-        self.label_login = None
-        self.password_entry = None
-        self.label_text = None
-        self.text_txt = None
         self.auth_btn = None
+        self.label_login = None
         self.label_password = None
+        self.label_text = None
+        self.password_entry = None
+        self.text_txt = None
         self.login_entry = None
         self.win = None
         self.poster = poster
@@ -32,8 +32,9 @@ class AutoPosterGUI(threading.Thread):
         self.login_entry = tk.Entry(self.win, width=29)
         self.label_password = tk.Label(self.win, text="Password")
         self.auth_btn = tk.Button(self.win, text="Authentication",
-                                  command=lambda: self.poster.handle_login(self.login_entry.get(),
-                                                                           self.password_entry.get()))
+                                  command=lambda: threading.Thread(
+                                      target=self.poster.handle_login(self.login_entry.get(),
+                                                                      self.password_entry.get()), daemon=True).start())
 
         self.text_txt = tk.Text(self.win, width=22, height=10, wrap=WORD)
         self.label_text = tk.Label(self.win, text="Text")
@@ -54,11 +55,10 @@ class AutoPosterGUI(threading.Thread):
             self.poster.stop_execution()
 
     def start_posting(self):
-        if not self.poster.is_driver_online:
+        if not self.poster.is_driver_online or self.poster.is_posting:
+            self.poster.stop_execution()
             self.poster.start_driver()
             self.poster.handle_login()
-        if self.poster.is_posting:
-            self.poster.stop_execution()
 
         self.poster.start_posting(self.text_txt.get('1.0', 'end'))
 
