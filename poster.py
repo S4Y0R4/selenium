@@ -24,7 +24,7 @@ WRITE_SOMETHING_PATH = "//*[contains(text(), 'Napisz coś...')]"
 PEOPLE_BUTTON_PATH = "/html/body/div[1]/div/div[1]/div/div[4]/div/div/div[1]/div/div[2]/div/div/div/div/div[1]/form/" \
                      "div/div[1]/div/div/div[1]/div/div[3]/div[1]/div" \
                      "[2]/div[4]/div/span/div/div/div[1]/div/div/div[1]/i"
-GROUP_NAME_BUTTON = "_"
+LOGOUT_BUTTON = "_"
 
 
 class Poster:
@@ -56,14 +56,12 @@ class Poster:
 
     def stop_execution(self):
         self.is_posting = False
-        self.current_driver.quit()
-        self.is_driver_online = False
+        self.home_page()
+        #self.is_driver_online = False
 
     def auth(self, login, password) -> None:
-
         if self.is_cookie_button_exist():
             self.current_driver.find_element(By.XPATH, COOKIE_BUTTON_PATH).click()
-
         email_input = self.current_driver.find_element(By.ID, "email")
         email_input.clear()
         email_input.send_keys(login)
@@ -78,6 +76,8 @@ class Poster:
             return
 
         self.gui.handle_logged_in()
+        self.gui.status_switch_stop_posting_btn()
+        self.gui.status_switch_auth_btn()
 
     def is_logged_in(self) -> bool:
 
@@ -137,12 +137,14 @@ class Poster:
 
     @staticmethod
     def is_file_path_not_empty(file_path):
-
         if len(file_path) > 0:
             return True
 
-    def set_groups_from_file(self, file_path):
+    def is_length_of_links_more_than_0(self):
+        if len(self.links) > 0:
+            return True
 
+    def set_groups_from_file(self, file_path):
         if self.is_file_path_not_empty(file_path):
             self.links = set()
             with open(file_path) as file:
@@ -156,26 +158,28 @@ class Poster:
         num_of_new_line = counter["\n"]
         return num_of_new_line
 
+    def is_message_not_empty(self, message: str) -> bool:
+        if len(message) == 0:
+            return False
+
     def write_message(self, message: str):
-        action_chain = ActionChains(self.current_driver)
-        action_chain.send_keys(message)
-        if self.count_lines(message) > 3:
-            action_chain.send_keys(Keys.TAB * 8)
-        else:
-            action_chain.send_keys(Keys.TAB * 9)
-        action_chain.perform()
-        time.sleep(1)
-        action_chain.send_keys(Keys.ENTER)
-        action_chain.perform()
+        if self.is_message_not_empty:
+            action_chain = ActionChains(self.current_driver)
+            action_chain.send_keys(message)
+            if self.count_lines(message) > 3:
+                action_chain.send_keys(Keys.TAB * 8)
+            else:
+                action_chain.send_keys(Keys.TAB * 9)
+            action_chain.perform()
+            time.sleep(1)
+            action_chain.send_keys(Keys.ENTER)
+            action_chain.perform()
 
     @staticmethod
     def get_clickable_button(span: WebElement) -> WebElement:
         parent = span.find_element(By.XPATH, "..")
         return parent.find_element(By.XPATH, "..")
 
-    def is_length_of_links_more_than_0(self):
-        if len(self.links) > 0:
-            return True
 
     def is_write_something_exist(self):
         try:
@@ -189,6 +193,7 @@ class Poster:
 
     def start_posting(self, message_to_post):
         self.is_posting = True
+        self.gui.status_switch_posting_btn()
         if self.is_length_of_links_more_than_0():
             self.gui.handle_posting_started()
             for group in self.links:
@@ -200,30 +205,29 @@ class Poster:
                     button.click()
                 if self.is_text_field_in_group_exist():
                     self.write_message(message_to_post)
-                    #WebDriverWait(self.current_driver, 6, 0.5).until(ec.element_to_be_clickable((By.LINK_TEXT, group)))
+                    # WebDriverWait(self.current_driver, 6, 0.5).until(ec.element_to_be_clickable((By.LINK_TEXT, group)))
                     time.sleep(6)
                 else:
-                    print("is_text_field_in_group_is_not_exist")
-                    pass  # TODO: add logger логирование в питоне
-                # wait(self.current_driver, timeout=3).until(self.is_text_input_field_exist())
-                # try:
-                #     write_something = self.current_driver.find_element(By.XPATH, WRITE_SOMETHING_PATH)
-                #     button = self.get_clickable_button(write_something)
-                #     button.click()
-                #     time.sleep(2)
-                #     self.write_message(message_to_post)
-                #     time.sleep(6)
-                # except Exception as e:
-                #     print(e)  # TODO: add logger логирование в питоне
-                #     continue
+                    print("text field in group is not exist")
+                    continue  # TODO: add logger логирование в питоне
+            self.home_page()
+            self.is_posting = False
+            self.gui.status_switch_stop_posting_btn()
+            self.gui.status_switch_posting_btn()
+            self.gui.status_switch_auth_btn()
+            mb.showinfo("Posting is over", "Now you can change your facebook account, or choose another .txt file")
+
         else:
+            self.is_posting = False
+            self.gui.status_switch_posting_btn()
             mb.showerror("Error", "Link to group can not be empty")
             return
 
-    #
-    # class Logger
-    # def init(self, path_to_file) -> None:
-    #     pass
-    #
-    # def log(message):
-    #     pass
+
+class Logger:
+
+    def __init__(self, path_to_file):
+        self.path_to_file = path_to_file
+
+    def log(self, message):
+        pass
