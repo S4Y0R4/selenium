@@ -1,5 +1,6 @@
 import collections
 import time
+from selenium.common.exceptions import NoSuchElementException
 from tkinter import messagebox as mb
 from selenium import webdriver
 from selenium.webdriver import ActionChains, Keys
@@ -24,7 +25,18 @@ WRITE_SOMETHING_PATH = "//*[contains(text(), 'Napisz coś...')]"
 PEOPLE_BUTTON_PATH = "/html/body/div[1]/div/div[1]/div/div[4]/div/div/div[1]/div/div[2]/div/div/div/div/div[1]/form/" \
                      "div/div[1]/div/div/div[1]/div/div[3]/div[1]/div" \
                      "[2]/div[4]/div/span/div/div/div[1]/div/div/div[1]/i"
-LOGOUT_BUTTON = "_"
+
+ANOTHER_PEOPLE_BUTTON_PATH = "/html/body/div[1]/div/div[1]/div/div[6]/div/div/div[1]/div/div[2]/div/div/div/div/div[" \
+                             "1]/form/div/div[1]/div/div/div[1]/div/div[3]/div[1]/div[2]/div[2]/div/span/div/div/div" \
+                             "[1]/div/div/div[1]/i"
+
+LOADING_POST_PL = "//span[text()='Publikowanie']"
+
+ABSOLUTE_CHROME_PATH = r"C:\Users\r1kk4\PycharmProjects\selenium\selenium\chrome\chromedriver.exe"
+
+BLOCK_WARNING = "//span[text()='powiadom nas o tym']"
+
+CAN_NOT_POSTING_ALERT = "/html/body/div[4]/div[1]/div/div[2]/div/div/div/div/div[3]/div/div[1]/div"
 
 
 class Poster:
@@ -40,7 +52,7 @@ class Poster:
 
     def start_driver(self):
         self.current_driver = webdriver.Chrome(
-            executable_path=r"chrome\chromedriver.exe",
+            executable_path=ABSOLUTE_CHROME_PATH,
             options=self.options)
         self.is_driver_online = True
         self.home_page()
@@ -56,8 +68,8 @@ class Poster:
 
     def stop_execution(self):
         self.is_posting = False
-        self.home_page()
-        #self.is_driver_online = False
+        # self.is_driver_online = False
+        # self.current_driver.quit()
 
     def auth(self, login, password) -> None:
         if self.is_cookie_button_exist():
@@ -76,11 +88,10 @@ class Poster:
             return
 
         self.gui.handle_logged_in()
-        self.gui.status_switch_stop_posting_btn()
         self.gui.status_switch_auth_btn()
+        self.gui.status_switch_stop_posting_btn()
 
     def is_logged_in(self) -> bool:
-
         if self.is_home_button_exist():
             home_button = self.current_driver.find_element(By.XPATH, HOME_BUTTON_PATH)
             if home_button.get_attribute("data-visualcompletion") == "css-img":
@@ -92,59 +103,84 @@ class Poster:
         else:
             return False
 
-    def is_home_button_exist(self):
+    def is_can_not_posting_alert_exist(self):
+        try:
+            WebDriverWait(self.current_driver, 1, 0.25).until(
+                ec.visibility_of_element_located((By.XPATH, CAN_NOT_POSTING_ALERT)))
+            logger.log("WARNING BAN IS COMING")
+            return True
+        except TimeoutException:
+            return False
+
+    def is_home_button_exist(self) -> bool:
         try:
             WebDriverWait(self.current_driver, 2, 0.3).until(
                 ec.visibility_of_element_located((By.XPATH, HOME_BUTTON_PATH)))
-            print("HOME_BUTTON was found")
+            logger.log("HOME_BUTTON was found")
             return True
         except TimeoutException:
-            print("HOME_BUTTON was not found")
+            logger.log("ERROR" + ": " + "HOME_BUTTON was not found")
             return False
 
-    def is_picture_button_exist(self):
+    def is_picture_button_exist(self) -> bool:
         try:
             WebDriverWait(self.current_driver, 2, 0.3).until(
                 ec.visibility_of_element_located((By.XPATH, PICTURE_BUTTON_PATH)))
-            print("PICTURE_BUTTON was found")
+            logger.log("PICTURE_BUTTON was found")
             return True
         except TimeoutException:
-            print("PICTURE_BUTTON was not found")
+            logger.log("ERROR" + ": " + "PICTURE_BUTTON was not found")
             return False
 
     def is_cookie_button_exist(self) -> bool:
         try:
             WebDriverWait(self.current_driver, 2, 0.3).until(
                 ec.visibility_of_element_located((By.XPATH, COOKIE_BUTTON_PATH)))
-            print("COOKIE_BUTTON was found")
+            logger.log("COOKIE_BUTTON was found")
             return True
         except TimeoutException:
-            print("COOKIE_BUTTON was not found")
+            logger.log("ERROR" + ": " + "COOKIE_BUTTON was not found")
             return False
 
-    def is_text_field_in_group_exist(self):
+    def is_text_field_in_group_exist(self) -> bool:
+        if self.is_people_button_exist() or self.is_another_people_button_exist():
+            logger.log("TEXT FIELD IS EXIST")
+            return True
+        else:
+            logger.log("ERROR" + ": " + "TEXT FIELD IS NOT EXIST")
+            return False
+
+    def is_people_button_exist(self) -> bool:
         try:
             WebDriverWait(self.current_driver, 2, 0.3).until(
                 ec.visibility_of_element_located((By.XPATH, PEOPLE_BUTTON_PATH)))
-            print("PEOPLE_BUTTON was found")
+            logger.log("ERROR" + ": " + "PEOPLE_BUTTON was found")
             return True
         except TimeoutException:
-            print("PEOPLE_BUTTON was not found")
+            logger.log("ERROR" + ": " + "PEOPLE_BUTTON was not found")
+            return False
+
+    def is_another_people_button_exist(self) -> bool:
+        try:
+            WebDriverWait(self.current_driver, 2, 0.3).until(
+                ec.visibility_of_element_located((By.XPATH, ANOTHER_PEOPLE_BUTTON_PATH)))
+            logger.log("ANOTHER_PEOPLE_BUTTON was found")
+            return True
+        except TimeoutException:
+            logger.log("ERROR" + ": " + "ANOTHER_PEOPLE_BUTTON was not found")
             return False
 
     def home_page(self):
         self.current_driver.get("https://facebook.com")
 
     @staticmethod
-    def is_file_path_not_empty(file_path):
-        if len(file_path) > 0:
-            return True
+    def is_file_path_not_empty(file_path) -> bool:
+        return len(file_path) > 0
 
-    def is_length_of_links_more_than_0(self):
-        if len(self.links) > 0:
-            return True
+    def is_links_not_empty(self) -> bool:
+        return len(self.links) > 0
 
-    def set_groups_from_file(self, file_path):
+    def set_groups_from_file(self, file_path: str):
         if self.is_file_path_not_empty(file_path):
             self.links = set()
             with open(file_path) as file:
@@ -158,7 +194,8 @@ class Poster:
         num_of_new_line = counter["\n"]
         return num_of_new_line
 
-    def is_message_not_empty(self, message: str) -> bool:
+    @staticmethod
+    def is_message_not_empty(message: str) -> bool:
         if len(message) == 0:
             return False
 
@@ -180,48 +217,75 @@ class Poster:
         parent = span.find_element(By.XPATH, "..")
         return parent.find_element(By.XPATH, "..")
 
-
-    def is_write_something_exist(self):
+    def is_write_something_exist(self) -> bool:
         try:
             WebDriverWait(self.current_driver, 2, 0.3).until(
                 ec.visibility_of_element_located((By.XPATH, WRITE_SOMETHING_PATH)))
-            print("WRITE_SOMETHING_PATH was found")
+            logger.log("ERROR" + ": " + "WRITE_SOMETHING_PATH was found")
             return True
         except TimeoutException:
-            print("WRITE_SOMETHING_PATH was not found")
+            logger.log("ERROR" + ": " + "WRITE_SOMETHING_PATH was not found")
             return False
 
     def start_posting(self, message_to_post):
-        self.is_posting = True
-        self.gui.status_switch_posting_btn()
-        if self.is_length_of_links_more_than_0():
+        if self.is_links_not_empty():
+            self.is_posting = True
+            logger.log("posting button status was changed to normal")
+            self.gui.status_switch_posting_btn()
+            self.gui.status_switch_stop_posting_btn()
+            self.gui.status_switch_open_btn()
             self.gui.handle_posting_started()
             for group in self.links:
-                self.current_driver.get(group)
-                self.gui.handle_link_changed(group)
-                if self.is_write_something_exist():
-                    write_something = self.current_driver.find_element(By.XPATH, WRITE_SOMETHING_PATH)
-                    button = self.get_clickable_button(write_something)
-                    button.click()
-                if self.is_text_field_in_group_exist():
-                    self.write_message(message_to_post)
-                    # WebDriverWait(self.current_driver, 6, 0.5).until(ec.element_to_be_clickable((By.LINK_TEXT, group)))
-                    time.sleep(6)
-                else:
-                    print("text field in group is not exist")
-                    continue  # TODO: add logger логирование в питоне
+                if self.is_posting:
+                    self.current_driver.get(group)
+                    # self.gui.handle_link_changed(group)#TODO: HANDLE LINK
+                    if self.is_write_something_exist():
+                        write_something = self.current_driver.find_element(By.XPATH, WRITE_SOMETHING_PATH)
+                        button = self.get_clickable_button(write_something)
+                        button.click()
+                    if self.is_text_field_in_group_exist():
+                        self.write_message(message_to_post)
+                        if self.is_can_not_posting_alert_exist() or self.is_block_warning_exist():
+                            self.home_page()
+                            self.is_posting = False
+                            self.gui.status_switch_posting_btn()
+                            self.gui.status_switch_stop_posting_btn()
+                            self.gui.status_switch_open_btn()
+                            logger.log(
+                                "WARNING" + ": " + "A blocking warning has been received, it is recommended that you \
+                                end your account")
+                        else:
+                            self.is_loading_post_pl_disappeared()
+                    else:
+                        logger.log("ERROR" + ": " + "text field in group is not exist")
+                        continue
             self.home_page()
             self.is_posting = False
+            self.gui.status_switch_posting_btn()
             self.gui.status_switch_stop_posting_btn()
-            self.gui.status_switch_posting_btn()
-            self.gui.status_switch_auth_btn()
-            mb.showinfo("Posting is over", "Now you can change your facebook account, or choose another .txt file")
-
+            self.gui.status_switch_open_btn()
+            # self.gui.status_switch_auth_btn()
+            logger.log("Posting is over. Now you can choose another .txt file")
+            return mb.showinfo("Posting is over", "Now you can choose another .txt file")
         else:
-            self.is_posting = False
-            self.gui.status_switch_posting_btn()
-            mb.showerror("Error", "Link to group can not be empty")
-            return
+            logger.log("ERROR" + ": " + "Link to group can not be empty")
+            return mb.showerror("Error", "Link to group can not be empty")
+
+    def is_loading_post_pl_disappeared(self):
+        while True:
+            try:
+                self.current_driver.find_element(By.XPATH, LOADING_POST_PL)
+            except NoSuchElementException:
+                break
+
+    def is_block_warning_exist(self):
+        try:
+            self.current_driver.find_element(By.XPATH, BLOCK_WARNING)
+        except NoSuchElementException:
+            logger.log("BLOCK WARNING!!!")
+            mb.showwarning("BLOCK WARNING!",
+                           """The account has been temporarily suspended, please restart the program as a different\
+                            user. To avoid this, please use the program wisely!""")
 
 
 class Logger:
@@ -230,4 +294,9 @@ class Logger:
         self.path_to_file = path_to_file
 
     def log(self, message):
-        pass
+        with open(self.path_to_file, "a") as log_file:
+            log_file.write(message + "\n")
+            log_file.close()
+
+
+logger = Logger(r"C:\Users\r1kk4\OneDrive\Рабочий стол\logs.txt")
